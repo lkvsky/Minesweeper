@@ -1,45 +1,99 @@
+require 'debugger'
+
 class Minesweeper
 
   def initialize
-
+    gameboard = build_gameboard(user_settings)
+    adjacent_sq_counter(gameboard)
+    print_board(gameboard)
   end
 
   def user_settings
     puts "Minesweeper grid size? 1 for 9x9, 2 for 16x16"
     size = gets.chomp.to_i
-    if size != 1 || size != 2
+    unless size == 1 || size == 2
       puts "invalid entry"
       user_settings
     end
     size
   end
   # gameboard methods
-  def gameboard(size)
+  def build_gameboard(size)
     n, m = 0
-    gameboard = []
-    n = 9, m = 10 if size == 1
-    n = 16, m = 40 if size == 2
-    n.times do
-      gameboard << [Square.new] * n
+    n, m = 9, 10 if size == 1
+    n, m = 16, 40 if size == 2
+    gameboard = Array.new(n) do
+      Array.new(n) { Square.new }
     end
-    m.times do
-      set_bomb(gameboard)
+    #debugger
+    set_bomb(gameboard, m)
+    gameboard
+  end
+
+  def set_bomb(gameboard, bomb_count)
+    bombs = 0
+    while true
+      return if bombs == bomb_count
+      row = gameboard.sample
+      square = row.sample
+      if square.bomb == false
+        square.bomb = true
+        bombs += 1
+      end
     end
   end
 
-  def set_bomb(gameboard)
-    row = gameboard.sample
-    square = row.sample
-    if square.bomb == true
-      set_bomb(gameboard)
-    else
-      square.bomb = true
+  def print_board(gameboard)
+    gameboard.each do |row|
+      row.each do |square|
+        if square.bomb == true
+          print "X"
+          next
+        elsif square.adj_bomb == 0
+          print "*"
+          next
+        else
+          print square.adj_bomb
+        end
+      end
+      puts "\n"
     end
   end
 
-  def set_square_types
-    # set the bombs
-    # iterate the adj_bomb count accordingly
+  def adjacent_sq_counter(gameboard)
+    #debugger
+    gameboard.each_with_index do |row, i|
+      row.each_with_index do |square, j|
+        next if square.bomb == false
+        # neighbors
+        if square != row.first
+          row[j-1].adj_bomb += 1
+        end
+        if square != row.last
+          row[j+1].adj_bomb += 1
+        end
+        # row above
+        if row != gameboard.first
+          if square != row.first
+            gameboard[i-1][j-1].adj_bomb += 1
+          end
+          gameboard[i-1][j].adj_bomb += 1
+          if square != row.last
+            gameboard[i-1][j+1].adj_bomb += 1
+          end
+        end
+        # row below
+        if row != gameboard.last
+          if square != row.first
+            gameboard[i+1][j-1].adj_bomb += 1
+          end
+          gameboard[i+1][j].adj_bomb += 1
+          if square != row.last
+            gameboard[i+1][j+1].adj_bomb += 1
+          end
+        end
+      end
+    end
   end
 
   # user methods
@@ -70,7 +124,7 @@ class Square
 
   def initialize
     @bomb = false
-    @adj_bomb = nil
+    @adj_bomb = 0
     @flagged = false
     @revealed = false
   end
