@@ -2,9 +2,10 @@ require 'debugger'
 
 class Minesweeper
 
+  DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]
+
   def initialize
     gameboard = build_gameboard(user_settings)
-    adjacent_sq_counter(gameboard)
     print_board(gameboard)
   end
 
@@ -27,6 +28,7 @@ class Minesweeper
     end
     #debugger
     set_bomb(gameboard, m)
+    fringe_sq_iterator(gameboard)
     gameboard
   end
 
@@ -60,46 +62,37 @@ class Minesweeper
     end
   end
 
-  def adjacent_sq_counter(gameboard)
-    #debugger
+  def fringe_sq_iterator(gameboard)
     gameboard.each_with_index do |row, i|
       row.each_with_index do |square, j|
-        next if square.bomb == false
-        # neighbors
-        if square != row.first
-          row[j-1].adj_bomb += 1
-        end
-        if square != row.last
-          row[j+1].adj_bomb += 1
-        end
-        # row above
-        if row != gameboard.first
-          if square != row.first
-            gameboard[i-1][j-1].adj_bomb += 1
-          end
-          gameboard[i-1][j].adj_bomb += 1
-          if square != row.last
-            gameboard[i-1][j+1].adj_bomb += 1
-          end
-        end
-        # row below
-        if row != gameboard.last
-          if square != row.first
-            gameboard[i+1][j-1].adj_bomb += 1
-          end
-          gameboard[i+1][j].adj_bomb += 1
-          if square != row.last
-            gameboard[i+1][j+1].adj_bomb += 1
+        if square.bomb == true
+          adjacents = adjacent_squares(gameboard, [i, j])
+          adjacents.each do |coordinates|
+            gameboard[coordinates[0]][coordinates[1]].adj_bomb += 1
           end
         end
       end
     end
   end
 
+  def adjacent_squares(gameboard, coordinates)
+    adjacents = DELTAS.map do |coord|
+      x = coord[0] + coordinates[0]
+      y = coord[1] + coordinates[1]
+      [x, y]
+    end
+    selected = adjacents.select do |coord|
+      coord[0] < gameboard.length && coord[0] > 0 && coord[1] < gameboard.length && coord[1] > 0
+    end
+    p selected
+    selected
+  end
+
   # user methods
 
-  def reveal
-    puts "What square do you want to reveal?"
+  def move
+    puts "Type 'R' and your coordinates to reveal (ex: R 4, 5)"
+    puts "Type 'F' and your coordinates to flag"
     coordinates = gets.chomp
     if coordinates[:bomb] == true
       puts "You lost!"
