@@ -6,9 +6,6 @@ class Minesweeper
 
   DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]
 
-  def initialize
-  end
-
   def user_settings
     puts "Minesweeper grid size? 1 for 9x9, 2 for 16x16"
     size = gets.chomp.to_i
@@ -21,15 +18,43 @@ class Minesweeper
 
   def play
     build_gameboard(user_settings)
-    while game_over == false
+    until game_over? || won?
       print_board
       player_move = move
       check_coordinate(player_move)
     end
-    "GAME"
+    print_board
+    puts "GAME OVER!" if game_over?
+    puts "YOU WON!" if won?
   end
 
-  def game_over
+  def user_settings
+    puts "Minesweeper grid size? 1 for 9x9, 2 for 16x16"
+    size = gets.chomp.to_i
+    unless size == 1 || size == 2
+      puts "invalid entry"
+      user_settings
+    end
+    size
+  end
+
+  def game_over?
+    @gameboard.each do |row|
+      row.each do |square|
+        return true if square.bomb == true && square.revealed == true
+      end
+    end
+    false
+  end
+
+  def won?
+    correct_guesses = 0
+    @gameboard.each do |row|
+      row.each do |square|
+        correct_guesses += 1 if square.bomb == true && square.flagged == true
+      end
+    end
+    return true if correct_guesses == @bomb_count
     false
   end
 
@@ -41,15 +66,14 @@ class Minesweeper
     @gameboard = Array.new(n) do
       Array.new(n) { Square.new }
     end
-    #debugger
-    set_bomb(m)
+    @bomb_count = m
+    set_bomb
     fringe_sq_iterator
   end
 
-  def set_bomb(bomb_count)
+  def set_bomb
     bombs = 0
-    while true
-      return if bombs == bomb_count
+    until bombs == @bomb_count
       row = @gameboard.sample
       square = row.sample
       if square.bomb == false
@@ -64,18 +88,18 @@ class Minesweeper
       row.each do |square|
         if square.revealed == true || square.flagged == true
           if square.flagged == true
-            print "F"
+            print " F "
             next
           elsif square.bomb == true
-            print "X"
+            print " X "
             next
           elsif square.adj_bomb == 0
-            print " "
+            print " - "
           else
-            print "#{square.adj_bomb}"
+            print " #{square.adj_bomb} "
           end
         else
-          print "*"
+          print " * "
         end
       end
       print "\n"
@@ -119,20 +143,19 @@ class Minesweeper
   def check_coordinate(move)
     type = move[0]
     coord = move[1]
+    tile = @gameboard[coord[0]][coord[1]]
     if type == 'r'
-      if @gameboard[coord[0]][coord[1]].bomb == true
-        @gameboard[coord[0]][coord[1]].revealed = true
-        game_over = true
+      if tile.bomb == true
+        tile.revealed = true
       else
         reveal(coord)
       end
     elsif type == 'f'
-      @gameboard[coord[0]][coord[1]].flagged = true
+      tile.flagged = true
     end
   end
 
   def reveal(move)
-    #debugger
     queue = [move]
     checked = []
 
@@ -141,11 +164,11 @@ class Minesweeper
       checked << move
       to_check = adjacent_squares(move)
       to_check.each do |coord|
-        if @gameboard[coord[0]][coord[1]].bomb == false || !checked.include?(coord)
+        if @gameboard[coord[0]][coord[1]].bomb == false
           queue << coord
         end
       end
-      p queue
+      queue.delete_if { |coord| checked.include?(coord) }
     end
   end
 end
